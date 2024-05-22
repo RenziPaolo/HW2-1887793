@@ -2,7 +2,6 @@ import json
 import torch
 from torch.utils.data import Dataset
 from torch.nn.utils.rnn import pad_sequence
-from torchtext.vocab import Vocab, vocab
 from collections import Counter
 from git import Repo
 
@@ -19,7 +18,7 @@ class JSONLDataset(Dataset):
         test (bool): True if the dataset is for testing, False otherwise.
         """
 
-        self.data_dict = self.read_json_file(test)
+        self.data_dict = self.read_json_file(test, path)
         #
         self.device = device
         if tokenizer != None:
@@ -31,7 +30,7 @@ class JSONLDataset(Dataset):
                 self.tokenizedData.append({'text': tokenizedText, 'label': label})
         self.Data = self.data_dict
 
-    def read_json_file(self, test:  bool) -> list:
+    def read_json_file(self, test:  bool, file_path:str) -> list:
         """
         Read JSON data from a file and return it as a Python dictionary.
 
@@ -41,14 +40,6 @@ class JSONLDataset(Dataset):
         Returns:
         dict: The JSON data as a dictionary.
         """
-        repo =  Repo(".", search_parent_directories=True)
-
-        root_dir = repo.git.rev_parse("--show-toplevel")
-
-        if test:
-            file_path = root_dir+"/data/haspeede3-task1-test-data.jsonl"
-        else:
-            file_path = root_dir+"/data/haspeede3-task1-test-data.jsonl"
         try:
             with open(file_path, 'r', encoding='utf-8') as file:
                 data_list = [json.loads(line.strip()) for line in file]
@@ -81,12 +72,8 @@ class JSONLDataset(Dataset):
         
     def get_max_seq_len(self):
         return torch.max(torch.tensor([len(sample["input_ids"]) for sample in self.Data], dtype=torch.long)).item()
-
-
-
     
 # MAIN
 if __name__ == '__main__' :
-    from transformers import BertTokenizer
-    dataset = JSONLDataset(test=True, device='cuda', tokenizer=BertTokenizer.from_pretrained("dbmdz/bert-base-italian-xxl-cased"))
+    dataset = JSONLDataset(test=True, device='cuda', tokenizer=None)
     print(dataset[0])
