@@ -2,9 +2,9 @@ from transformers import AutoModel
 import torch.nn as nn
 from kan import KAN
 
-class BaseModel(nn.Module):
+class KANModel(nn.Module):
     def __init__(self, device:str, max_lenght:int, model_name:str = "microsoft/mdeberta-v3-base"):
-        super(BaseModel, self).__init__()
+        super(KANModel, self).__init__()
         self.model = AutoModel.from_pretrained(model_name).to(device)
         self.kan = KAN(width=[max_lenght*768, 3], device=device)
 
@@ -27,7 +27,7 @@ if __name__ == '__main__' :
     
     data = load_dataset("fever","v2.0",cache_dir="../data/fever", trust_remote_code=True)
     print("data loaded")
-    model = BaseModel(device, 32, "microsoft/mdeberta-v3-base")
+    model = KANModel(device, 32, "microsoft/mdeberta-v3-base")
     tokenizer = AutoTokenizer.from_pretrained("microsoft/mdeberta-v3-base")
     print("model loaded")
     dataloader = DataLoader(data['validation'], batch_size=128, shuffle=True)
