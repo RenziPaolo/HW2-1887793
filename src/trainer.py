@@ -10,11 +10,12 @@ class Trainer():
         model: nn.Module,
         optimizer: torch.optim.Optimizer,
         log_steps: int = 1_000,
-        log_level: int = 2
+        log_level: int = 2,
+        loss_function = nn.CrossEntropyLoss()
     ):
         self.model = model
         self.optimizer = optimizer
-        self.loss_function = nn.CrossEntropyLoss() # this is the default loss used nearly everywhere in NLP
+        self.loss_function = loss_function # this is the default loss used nearly everywhere in NLP
 
         self.log_steps = log_steps
         self.log_level = log_level
