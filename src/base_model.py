@@ -2,15 +2,16 @@ from transformers import AutoModel
 import torch.nn as nn
 
 class BaseModel(nn.Module):
-    def __init__(self, device:str, max_lenght:int, model_name:str = "microsoft/deberta-v3-base"):
+    def __init__(self, device:str, lenght:int, model_name:str = "microsoft/deberta-v3-base"):
         super(BaseModel, self).__init__()
         self.model = AutoModel.from_pretrained(model_name).to(device)
-        self.linear = nn.Linear(max_lenght*768, 3, device=device)
+        self.linear = nn.Linear(lenght*768, 3, device=device)
+        self.lenght = lenght
 
     def forward(self, tokens):
         batch_size = tokens['input_ids'].shape[0]
         predictions = self.model(**tokens)
-        cls_output = predictions.last_hidden_state
+        cls_output = predictions.last_hidden_state[:,(-1,-self.lenght),:]
 
         return self.linear(cls_output.view(batch_size, -1))
 
@@ -33,7 +34,7 @@ if __name__ == '__main__' :
 
     for step, inputs in enumerate(dataloader):
         inputs = inputs['claim']
-        tokens = tokenizer(inputs, padding=True, truncation=True, return_tensors='pt',max_length=32)
+        tokens = tokenizer(inputs, padding=True, return_tensors='pt')
         tokens.to(device)
         with torch.no_grad():
            predictions = model(tokens)
