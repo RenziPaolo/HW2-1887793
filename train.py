@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 from src.trainer import Trainer
 from src.base_model import BaseModel
-from src.experimental import KANModel
+from src.KAN_model import KANModel
 from src.dataset import JSONLDataset
 
 from datetime import datetime
