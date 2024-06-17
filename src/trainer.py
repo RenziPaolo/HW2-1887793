@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from datetime import datetime
 
-class Trainer():
+class TrainerCustom():
     """Utility class to train and evaluate a model."""
 
     def __init__(
@@ -26,6 +27,7 @@ class Trainer():
         valid_dataloader: DataLoader,
         epochs: int = 1
     ) -> dict[str, list[float]]:
+        start = datetime.now()
         """
         Args:
             train_dataloader: a DataLoader instance containing the training instances.
@@ -51,29 +53,29 @@ class Trainer():
                 print(' Epoch {:2d}'.format(epoch))
 
             epoch_loss = 0.0
-            self.model.train()
+            #self.model.train()
 
             # for each batch
-            for step, (sequence_lengths, inputs, labels) in enumerate(train_dataloader):
+            for step, data in enumerate(train_dataloader):
                 self.optimizer.zero_grad()
-
                 # We get the predicted logits from the model, with no need to perform any flattening
                 # as both predictions and labels refer to the whole sentence.
-                predictions = self.model((sequence_lengths, inputs))
+                inputs = {k: data[k] for k in ['input_ids', 'attention_mask']}
+                predictions = self.model(inputs)
 
                 # The CrossEntropyLoss expects the predictions to be logits, i.e. non-softmaxed scores across
                 # the number of classes, and the labels to be a simple tensor of labels.
                 # Specifically, predictions needs to be of shape [B, C], where B is the batch size and C is the number of
                 # classes, while labels must be of shape [B] where each element l_i should 0 <= l_i < C.
                 # See https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html for more information.
-                sample_loss = self.loss_function(predictions, labels)
+                sample_loss = self.loss_function(predictions, data['labels'])
                 sample_loss.backward()
                 self.optimizer.step()
 
                 epoch_loss += sample_loss.cpu().tolist()
 
-                if self.log_level > 1 and (step % self.log_steps) == (self.log_steps - 1):
-                    print('\t[E: {:2d} @ step {}] current avg loss = {:0.4f}'.format(epoch, step, epoch_loss / (step + 1)))
+                if self.log_level > 1 and (step % self.log_steps) == 0:
+                    print('\t[E: {:2d} @ step {}] current avg loss = {:0.4f} in {}'.format(epoch, step, epoch_loss / (step + 1), datetime.now()-start))
 
             avg_epoch_loss = epoch_loss / len(train_dataloader)
 
@@ -120,20 +122,18 @@ class Trainer():
         """
         valid_loss = 0.0
         valid_acc = 0.0
-        # When running in inference mode, it is required to have model.eval() AND .no_grad()
-        # Among other things, these set dropout to 0 and turn off gradient computation.
-        self.model.eval()
-        with torch.no_grad():
-            for batch in valid_dataloader:
-                sequence_lengths, inputs, labels = batch
 
-                logits = self.model((sequence_lengths, inputs))
+        with torch.no_grad():
+            for data in valid_dataloader:
+                inputs = {k: data[k] for k in ['input_ids', 'attention_mask']}
+
+                logits = self.model(inputs)
 
                 # Same considerations as the training step apply here
-                sample_loss = self.loss_function(logits, labels)
+                sample_loss = self.loss_function(logits, data['labels'])
                 valid_loss += sample_loss.tolist()
 
-                sample_acc = self._compute_acc(logits, labels)
+                sample_acc = self._compute_acc(logits, data['labels'])
                 valid_acc += sample_acc
 
         return valid_loss / len(valid_dataloader), valid_acc / len(valid_dataloader),

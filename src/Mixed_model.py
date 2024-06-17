@@ -3,11 +3,12 @@ import torch.nn as nn
 from kan import KAN
 import torch
 
-class KANModel(nn.Module):
+class MIXEDModel(nn.Module):
     def __init__(self, max_lenght:int, model_name:str, device:str):
-        super(KANModel, self).__init__()
+        super(MIXEDModel, self).__init__()
         self.model = AutoModel.from_pretrained(model_name).to(device)
-        self.kan = KAN(width=[max_lenght*768, 3], device=device)
+        self.mlp = nn.Linear(max_lenght*768, max_lenght*96, device=device)
+        self.kan = KAN(width=[max_lenght*96, 3], device=device)
 
     def forward(self, tokens):
         batch_size = tokens['input_ids'].shape[0]
@@ -15,7 +16,7 @@ class KANModel(nn.Module):
         cls_output = predictions.last_hidden_state
 
         data = cls_output.view(batch_size, -1)
-
+        data = self.mlp(data)
         return self.kan(data)
 
 # MAIN
@@ -34,7 +35,7 @@ if __name__ == '__main__' :
     print("data loaded")
 
     print("loading model...")
-    model = KANModel(device, lenght, "distilbert-base-uncased")
+    model = MIXEDModel(device, lenght, "distilbert-base-uncased")
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
     print("model loaded")
 
